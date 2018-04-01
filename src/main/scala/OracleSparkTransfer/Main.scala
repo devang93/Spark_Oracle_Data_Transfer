@@ -3,6 +3,8 @@ package OracleSparkTransfer
 import java.util.Properties
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.ScalaReflection.Schema
+import org.apache.spark.sql.types.{DataType, DecimalType, StructField, StructType}
 
 /**
   * Created by Devang Patel on 3/24/2018.
@@ -19,6 +21,25 @@ case class AppConfig(
                     )
 
 object Main {
+
+  def schemaFilter(srcSchema: DataType): StructType = {
+
+    srcSchema match {
+      case s: StructType => {
+        val newFields = s.fields.map( field => {
+          if(field.dataType.equals(DecimalType(38,10))){
+            val newField = StructField(field.name, DecimalType(38,6), field.nullable)
+            newField
+          } else
+            field
+        })
+        new StructType(newFields)
+      }
+      case _ => throw new RuntimeException("Not implemented yet. Expected only StructType.")
+    }
+
+  }
+
 
   def main(args: Array[String]): Unit = {
 
@@ -44,8 +65,11 @@ object Main {
 
         val oracleDF = spark.read.jdbc(url = jdbcURL, table = s"(${config.query}) oracle_data_pull", properties = oracleProperties)
         // print schema of dataframe.
+        val schema = schemaFilter(oracleDF.schema)
+        val convertedDF = spark.createDataFrame(oracleDF.rdd, schema)
+
         oracleDF.printSchema()
-        oracleDF.show()
+        convertedDF.printSchema()
         // write data out as parquet files.
         oracleDF.write.parquet(config.outputPath)
       }
