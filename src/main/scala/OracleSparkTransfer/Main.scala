@@ -2,8 +2,10 @@ package OracleSparkTransfer
 
 import java.nio.file.{Files, Paths}
 import java.util.Properties
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{DataType, DecimalType, StructField, StructType}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by Devang Patel on 3/24/2018.
@@ -28,6 +30,8 @@ case class AppConfig(
 
 object Main {
 
+  private val log = LoggerFactory.getLogger("OracleSparkTransfer.Main")
+
   // TODO: Still under development... DO NOT USE.
   def schemaFilter(srcSchema: DataType): StructType = {
 
@@ -49,7 +53,7 @@ object Main {
 
   // function to get lower and upper bound.
   def getBounds(spark: SparkSession, jdbcUrl: String, queryString: String, oracleProperties: Properties) = {
-    print("Getting upper and lower bound for the data to be fetched...")
+    log.info("Getting upper and lower bound for the data to be transferred...")
     val query = s"SELECT min(ROWNUM), max(ROWNUM) FROM (${queryString})"
     val bounds = spark.read.jdbc(
                                   url = jdbcUrl,
@@ -67,7 +71,7 @@ object Main {
     }
     config.exec_date match {
       case Some(exec_date) =>
-        val reg = """\$job_run_id""".r
+        val reg = """\$execution_date""".r
         output = reg.replaceAllIn(output, exec_date)
     }
     output
@@ -122,6 +126,7 @@ object Main {
         outputDF.printSchema()
         // write data out as parquet files.
         val outputPath = substituteExecutionParams(config.adls+config.outputPath, config)
+        log.info("writing data from Oracle Source to Sink : "+outputPath)
         outputDF.write.mode(config.writeMode).parquet(outputPath)
       }
       case None => parser.showUsageAsError
