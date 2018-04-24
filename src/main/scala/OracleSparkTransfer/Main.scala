@@ -19,6 +19,7 @@ case class AppConfig(
                       dbName: String = "",
                       query: String = "",
                       adls: String = "",
+                      tenantId: String = "",
                       spnClientId: String = "",
                       spnClientSecret: String = "",
                       outputPath: String = "",
@@ -88,6 +89,7 @@ object Main {
       opt[String]('o', "outputpath").required.valueName("<outputpath>").action((x,c) => c.copy(outputPath = x)).text("Output Path: REQUIRED")
       opt[String]('q', "sqlquery").required.valueName("<sqlquery>").action((x,c) => c.copy(query = x)).text("Oracle SQL Query to pull data: REQUIRED")
       opt[String]('a', "adls").required.valueName("<adlsName>").action((x,c) => c.copy(adls = x)).text("Azure Data Lake Storage Name: REQUIRED")
+      opt[String]('t', "tenantId").required.valueName("<tenantId>").action((x,c) => c.copy(tenantId = x)).text("Azure Tenant ID: REQUIRED.")
       opt[String]('k', "spnClientId").required.valueName("<spnClientId>").action((x,c) => c.copy(spnClientId = x)).text("Azure Application Service Principal Client ID: REQUIRED")
       opt[String]('s', "spnClientSecret").required.valueName("<spnClientSecret>").action((x,c) => c.copy(spnClientSecret = x)).text("Azure Application Service Principal Client Secret: REQUIRED")
       opt[Int]('n', "numPartitions").required.valueName("<numberPartitions>").action((x,c) => c.copy(numPartitions = x)).text("Number of Partitions for Spark parallelism: REQUIRED")
@@ -102,6 +104,8 @@ object Main {
         val spark = SparkSession.builder()
           .config("spark.hadoop.dfs.adls.oauth2.client.id", config.spnClientId)
           .config("spark.hadoop.dfs.adls.oauth2.credential", config.spnClientSecret)
+          .config("spark.hadoop.dfs.adls.oauth2.access.token.provider.type", "ClientCredential")
+          .config("spark.hadoop.dfs.adls.oauth2.refresh.url", s"https://login.microsoftonline.com/${config.tenantId}/oauth2/token")
           .appName("Spark_Oracle_Data_Transfer").getOrCreate()
 
         val jdbcURL = s"jdbc:oracle:thin:@//${config.dbHostPort}/${config.dbName}"
