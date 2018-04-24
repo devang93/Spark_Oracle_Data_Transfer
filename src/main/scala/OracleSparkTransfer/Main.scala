@@ -19,7 +19,8 @@ case class AppConfig(
                       adls: String = "",
                       spnClientId: String = "",
                       spnClientSecret: String = "",
-                      outputPath: String = ""
+                      outputPath: String = "",
+                      numPartitions: Int = 0
                     )
 
 object Main {
@@ -67,6 +68,7 @@ object Main {
       opt[String]('a', "adls").required.valueName("<adlsName>").action((x,c) => c.copy(adls = x)).text("Azure Data Lake Storage Name: REQUIRED")
       opt[String]('k', "spnClientId").required.valueName("<spnClientId>").action((x,c) => c.copy(spnClientId = x)).text("Azure Application Service Principal Client ID: REQUIRED")
       opt[String]('s', "spnClientSecret").required.valueName("<spnClientSecret>").action((x,c) => c.copy(spnClientSecret = x)).text("Azure Application Service Principal Client Secret: REQUIRED")
+      opt[Int]('n', "numPartitions").required.valueName("<numberPartitions>").action((x,c) => c.copy(numPartitions = x)).text("Number of Partitions for Spark parallelism: REQUIRED")
     }
 
     parser.parse(args, AppConfig()) match {
@@ -82,7 +84,7 @@ object Main {
         oracleProperties.setProperty("user", config.user)
         oracleProperties.setProperty("password", config.password)
         oracleProperties.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
-        oracleProperties.setProperty("fetchsize", "1000")
+        oracleProperties.setProperty("fetchsize", "2000")
         val queryString = new String(Files.readAllBytes(Paths.get(config.query)), "UTF-8")
         val bounds  = getBounds(spark, jdbcURL, queryString, oracleProperties)
 
@@ -91,7 +93,7 @@ object Main {
           columnName = "num_records",
           lowerBound = bounds._1,
           upperBound = bounds._2,
-          numPartitions = 9,
+          numPartitions = config.numPartitions,
           connectionProperties = oracleProperties)
 
         // drop num_records column.
