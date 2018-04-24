@@ -20,7 +20,10 @@ case class AppConfig(
                       spnClientId: String = "",
                       spnClientSecret: String = "",
                       outputPath: String = "",
-                      numPartitions: Int = 0
+                      writeMode: String = "overwrite",
+                      numPartitions: Int = 4,
+                      job_run_id: Option[Long] = None,
+                      exec_date: Option[String] = None
                     )
 
 object Main {
@@ -55,6 +58,21 @@ object Main {
     (bounds(0)(0).toString.toDouble.toLong, bounds(0)(1).toString.toDouble.toLong)
   }
 
+  def substituteExecutionParams(input: String, config: AppConfig): String = {
+    var output = new String(input)
+    config.job_run_id match {
+      case Some(id) =>
+        val reg = """\$job_run_id""".r
+        output = reg.replaceAllIn(output, id.toString)
+    }
+    config.exec_date match {
+      case Some(exec_date) =>
+        val reg = """\$job_run_id""".r
+        output = reg.replaceAllIn(output, exec_date)
+    }
+    output
+  }
+
   def main(args: Array[String]): Unit = {
 
     val parser = new scopt.OptionParser[AppConfig]("Spark Oracle Data Transfer Utility: 1.0.0") {
@@ -69,6 +87,9 @@ object Main {
       opt[String]('k', "spnClientId").required.valueName("<spnClientId>").action((x,c) => c.copy(spnClientId = x)).text("Azure Application Service Principal Client ID: REQUIRED")
       opt[String]('s', "spnClientSecret").required.valueName("<spnClientSecret>").action((x,c) => c.copy(spnClientSecret = x)).text("Azure Application Service Principal Client Secret: REQUIRED")
       opt[Int]('n', "numPartitions").required.valueName("<numberPartitions>").action((x,c) => c.copy(numPartitions = x)).text("Number of Partitions for Spark parallelism: REQUIRED")
+      opt[String]('w', "writeMode").valueName("<writeMode>").action((x,c) => c.copy(writeMode = x)).text("Write Mode [default: overwrite, append]: OPTIONAL.")
+      opt[Long]('i', "job_run_id").valueName("<job_run_id>").action((x,c) => c.copy(job_run_id = Some(x))).text("Job execution id: OPTIONAL.")
+      opt[String]('e', "execution_date").valueName("<execution_date>").action((x,c) => c.copy(exec_date = Some(x))).text("Job execution date: OPTIONAL.")
     }
 
     parser.parse(args, AppConfig()) match {
@@ -100,7 +121,8 @@ object Main {
         val outputDF = oracleDF.drop("num_records")
         outputDF.printSchema()
         // write data out as parquet files.
-        outputDF.write.parquet(config.adls+config.outputPath)
+        val outputPath = substituteExecutionParams(config.adls+config.outputPath, config)
+        outputDF.write.mode(config.writeMode).parquet(outputPath)
       }
       case None => parser.showUsageAsError
     }
