@@ -26,7 +26,8 @@ case class AppConfig(
                       writeMode: String = "overwrite",
                       numPartitions: Int = 4,
                       job_run_id: Option[Long] = None,
-                      exec_date: Option[String] = None
+                      exec_date: Option[String] = None,
+                      prev_exec_date: Option[String] = None
                     )
 
 object Main {
@@ -69,11 +70,19 @@ object Main {
       case Some(id) =>
         val reg = """\$job_run_id""".r
         output = reg.replaceAllIn(output, id.toString)
+      case None => log.warn("No job_run_id value provided at runtime!")
     }
     config.exec_date match {
       case Some(exec_date) =>
         val reg = """\$execution_date""".r
         output = reg.replaceAllIn(output, exec_date)
+      case None => log.warn("No execution_date value provided at runtime!")
+    }
+    config.prev_exec_date match {
+      case Some(prev_exec_date) =>
+        val reg = """\$prev_execution_date""".r
+        output = reg.replaceAllIn(output, prev_exec_date)
+      case None => log.warn("No prev_execution_date value provided at runtime!")
     }
     output
   }
@@ -95,7 +104,8 @@ object Main {
       opt[Int]('n', "numPartitions").required.valueName("<numberPartitions>").action((x,c) => c.copy(numPartitions = x)).text("Number of Partitions for Spark parallelism: REQUIRED")
       opt[String]('w', "writeMode").valueName("<writeMode>").action((x,c) => c.copy(writeMode = x)).text("Write Mode [default: overwrite, append]: OPTIONAL.")
       opt[Long]('i', "job_run_id").valueName("<job_run_id>").action((x,c) => c.copy(job_run_id = Some(x))).text("Job execution id: OPTIONAL.")
-      opt[String]('e', "execution_date").valueName("<execution_date>").action((x,c) => c.copy(exec_date = Some(x))).text("Job execution date: OPTIONAL.")
+      opt[String]('e', "execution_date").valueName("<execution_date>").action((x,c) => c.copy(exec_date = Some(x))).text("Current Job execution date: OPTIONAL.")
+      opt[String]('l', "prev_execution_date").valueName("<prev_execution_date>").action((x,c) => c.copy(prev_exec_date = Some(x))).text("Previous Job execution date: OPTIONAL.")
     }
 
     parser.parse(args, AppConfig()) match {
@@ -114,7 +124,9 @@ object Main {
         oracleProperties.setProperty("password", config.password)
         oracleProperties.setProperty("driver", "oracle.jdbc.driver.OracleDriver")
         oracleProperties.setProperty("fetchsize", "2000")
-        val queryString = new String(Files.readAllBytes(Paths.get(config.query)), "UTF-8")
+        val queryString = substituteExecutionParams(new String(Files.readAllBytes(Paths.get(config.query)), "UTF-8"), config)
+        log.info("Oracle Query to pull data: ")
+        log.info(queryString)
         val bounds  = getBounds(spark, jdbcURL, queryString, oracleProperties)
 
         val oracleDF = spark.read.jdbc(url = jdbcURL,
