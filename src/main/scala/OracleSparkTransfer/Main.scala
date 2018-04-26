@@ -34,25 +34,6 @@ object Main {
 
   private val log = LoggerFactory.getLogger("OracleSparkTransfer.Main")
 
-  // TODO: Still under development... DO NOT USE.
-  def schemaFilter(srcSchema: DataType): StructType = {
-
-    srcSchema match {
-      case s: StructType => {
-        val newFields = s.fields.map( field => {
-          if(field.dataType.equals(DecimalType(38,10))){
-            val newField = StructField(field.name, DecimalType(38,6), field.nullable)
-            newField
-          } else
-            field
-        })
-        new StructType(newFields)
-      }
-      case _ => throw new RuntimeException("Not implemented yet. Expected only StructType.")
-    }
-
-  }
-
   // function to get lower and upper bound.
   def getBounds(spark: SparkSession, jdbcUrl: String, queryString: String, oracleProperties: Properties) = {
     log.info("Getting upper and lower bound for the data to be transferred...")
