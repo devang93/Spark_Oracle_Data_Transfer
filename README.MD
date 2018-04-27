@@ -1,11 +1,30 @@
-This is Spark Application to Read/Load data from Oracle Database to Azure DataLake Storage.
+Spark Application to Load data from Oracle Databases to Azure DataLake Storage.
+It uses Apache Spark JDBC read capability with Oracle JDBC drivers.
+Data is written to ADLS in parquet format with snappy codec.
 
-Benefits:
-1. Parallel Oracle Data Loading using Spark.
-2. Parquet with Snappy compression codec --> 5:1 compression ratio --> Less Storage space --> Less storage cost.
-3. Support to write actual Oracle query with more than just a date column filter.
-4. Data can be transferred to any ADLS.
-5. Total Runtime is almost 1/10th of current java copy utility.
+Dependencies:
+    "org.apache.spark" %% "spark-core" % "2.1.0" % "provided"
+    "org.apache.spark" %% "spark-sql" % "2.1.0" % "provided"
+    "com.github.scopt" %% "scopt" % "3.3.0"  (included)
+    "ojdbc7.jar"  (included)
 
-TODO:
-Support for Azure Key Vault to read ADLS details.
+
+Run Command:
+
+    spark-submit --master <spark-master> --class OracleSparkTransfer.Main Spark_Oracle_Data_Transfer-assembly-1.0.0.jar
+    --user <oracle Username>
+    --password <oracle Password>
+    --dbHostPort <oracle host:port (e.g. 127.0.0.1:8000)>
+    --dbName <oracle Database Name>
+    --query <oracle sql query to pull data>
+    --adls <Azure Data Lake Store URI (e.g. adl://mydatalakestore.azuredatalakestore.net)>
+    --tenantId <Azure Tenant ID>
+    --spnClientId <Azure App Service Principal ApplicationID>
+    --spnClientSecret <Azure App Service Principal Secret/Password>
+    --outputPath <ADLS storage folder path>
+    --writeMode <append | overwrite (default)> (optional)
+    --numPartitions <spark parallel reads for oracle>
+    --job_run_id <if job running daily then an run_id to identify individual runs> (optional)
+    --exec_date <if job running daily then current execution_date for the run> (optional)
+    --prev_exec_date <if job running daily then previous_execution_date for last run> (optional)
+
