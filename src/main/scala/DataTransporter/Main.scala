@@ -68,7 +68,7 @@ object Main {
     output
   }
 
-  def main(args: Array[String]): Unit = {
+  def maintest(args: Array[String]): Unit = {
 
     val parser = new scopt.OptionParser[AppConfig]("Spark Oracle Data Transfer Utility: 1.0.0") {
       head("Spark Oracle Data Transfer Utility", "1.0.0")
