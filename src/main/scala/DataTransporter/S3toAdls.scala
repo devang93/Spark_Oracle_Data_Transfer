@@ -11,6 +11,10 @@ case class AppConfig(
                       spnClientId: String = "",
                       spnClientSecret: String = "",
                       outputPath: String = "",
+                      inputFormat: String = "",
+                      inputOptions: String = "",
+                      outputFormat: String = "",
+                      outputOptions: String = "",
                       writeMode: String = "overwrite",
                       job_run_id: Option[Long] = None,
                       exec_date: Option[String] = None,
@@ -47,15 +51,17 @@ object S3toAdls {
                     .config("spark.hadoop.fs.s3a.secret.key", config.s3secretKey)
                     .config("spark.hadoop.dfs.adls.oauth2.client.id", config.spnClientId)
                     .config("spark.hadoop.dfs.adls.oauth2.credential", config.spnClientSecret)
+                    .config("spark.hadoop.dfs.adls.oauth2.access.token.provider.type", "ClientCredential")
+                    .config("spark.hadoop.dfs.adls.oauth2.refresh.url", s"https://login.microsoftonline.com/${config.tenantId}/oauth2/token")
                     .appName("s3_to_adls_transfer")
                     .getOrCreate()
 
                 val inputDF = spark.read.format("csv")
-                  .option("header", "true")
+                  .option("header", "false")
                   .option("inferSchema", "false")
                   .option("delimiter", "|")
                   .load(config.s3path)
-
+                
                 inputDF.write.format("csv").option("delimiter", "|").option("compression", "gzip")
                   .save(config.adls+config.outputPath)
             }

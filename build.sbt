@@ -10,5 +10,6 @@ unmanagedJars in Compile ++= Seq(
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
   "org.apache.spark" %% "spark-sql" % "2.1.0" % "provided",
-  "com.github.scopt" %% "scopt" % "3.3.0"
+  "com.github.scopt" %% "scopt" % "3.3.0",
+  "org.rogach" %% "scallop" % "3.1.2"
 )
